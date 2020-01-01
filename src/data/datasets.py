@@ -80,6 +80,10 @@ def tokenizer_and_after(data: str) -> List[str]:
     return data
 
 
+def list_to_str(x):
+    return " ".join(x)
+
+
 def make_dataset_for_fasttext():
     a = read_paper()["abstract"].dropna()
     with open(os.path.join(root_dir(), "data", "paper.txt"), "w", encoding="utf-8") as f:
