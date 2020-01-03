@@ -71,8 +71,8 @@ def tokenizer_and_after(data: str) -> List[str]:
     :param data:
     :return:
     """
-    process_func = [tokenize
-                    ]
+    process_func = [tokenize,
+                    remove_stop_word, stemming]
 
     for func in process_func:
         data = func(data)

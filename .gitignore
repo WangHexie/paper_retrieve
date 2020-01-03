@@ -13,6 +13,7 @@ build
 *.ZE
 checkpoint
 *.meta
+*.pt
 *.pk
 *.index
 *.ckpt.data*
