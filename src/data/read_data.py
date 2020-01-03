@@ -1,7 +1,9 @@
 import os
+import pickle
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
 
 
 def root_dir():
@@ -18,6 +20,17 @@ def read_train_data():
 
 def read_validation_data():
     return pd.read_csv(os.path.join(root_dir(), "data", "validation.csv"))
+
+
+def load_file_or_model(name):
+    with open(os.path.join(root_dir(), "models", name), "rb") as f:
+        model = pickle.load(f)
+    return model
+
+
+def save_embedding(vector: np.array, name):
+    with open(os.path.join(root_dir(), "models", name), "wb") as f:
+        pickle.dump(vector, f)
 
 
 if __name__ == '__main__':

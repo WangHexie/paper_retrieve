@@ -6,10 +6,10 @@ import numpy as np
 import scipy
 from sklearn.metrics.pairwise import cosine_similarity
 
-from src.data.read_data import root_dir, read_paper, read_validation_data, read_train_data
+from src.data.read_data import root_dir, read_paper, read_validation_data, read_train_data, load_file_or_model
 
 
-def output_top_index(description_tf_idf, paper_tf_idf, top=3, sub_length=1000):
+def output_top_index(description_tf_idf, paper_tf_idf, top=3, sub_length=1000, dense=False):
     length = description_tf_idf.shape[0]
 
     start = 0
@@ -20,7 +20,7 @@ def output_top_index(description_tf_idf, paper_tf_idf, top=3, sub_length=1000):
             sub_length = length
         length -= sub_length
 
-        result = matrix_similarity(description_tf_idf[start:start + sub_length], paper_tf_idf)
+        result = matrix_similarity(description_tf_idf[start:start + sub_length], paper_tf_idf, dense)
 
         max_cols = []
 
@@ -90,5 +90,22 @@ def prediction_metrics(true_labels, predictions):
     print(correct_number, full_length)
 
 
-def matrix_similarity(description_matrix, paper_matrix):
-    return cosine_similarity(description_matrix, paper_matrix, dense_output=False)
+def matrix_similarity(description_matrix, paper_matrix, dense):
+    return cosine_similarity(description_matrix, paper_matrix, dense_output=dense)
+
+
+def save_prediction_of_xx_triplet(top_index_name="top_index.pk", is_validation=True, number_to_save=3, name_to_save="validation.csv"):
+    top_index = load_file_or_model(top_index_name)
+
+    final_prediction = []
+    paper_id = load_file_or_model("paper_id.pk")
+
+    if is_validation:
+        description_id = load_file_or_model("validation_id.pk")
+    else:
+        description_id = load_file_or_model("train_description_id.pk")
+
+    for i in range(len(top_index)):
+        final_prediction.append([description_id[i]] + paper_id[top_index[i]].tolist()[:number_to_save])
+
+    pd.DataFrame(final_prediction).to_csv(os.path.join(root_dir(), "result", name_to_save), index=False, header=False)
