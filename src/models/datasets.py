@@ -41,7 +41,6 @@ class TripletText(Dataset):
         self.batch_size = batch_size
         self.sample_num = sample_num
         self.to_max = True
-        self.shuffle()
         self.embedding = word_to_vector.FastText(cache=os.path.join(root_dir(), "models"))
         self.max_len = max_len
 
@@ -54,9 +53,14 @@ class TripletText(Dataset):
     def string_to_vec(self, strings):
         wordss = list(map(lambda x: tokenize(x)[:self.max_len], strings))
         try:
+
+            wordss = list(map(lambda x: x + ["nan"], wordss))
             embeddings = list(map(lambda words: torch.stack([self.embedding[word] for word in words]), wordss))
         except RuntimeError:
             print(wordss)
+            for i in wordss:
+                if len(i) == 0:
+                    print(i)
 
         fixed_length_embedding = pad_sequence(embeddings).permute(1, 2, 0)
 

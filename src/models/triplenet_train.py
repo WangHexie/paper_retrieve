@@ -2,6 +2,7 @@ import torch
 from torch import optim
 from torch.optim import lr_scheduler
 
+from src.data.read_data import load_file_or_model
 from src.models.datasets import TripletText
 from src.models.losses import TripletLoss, MyOnlineTripletLoss
 from src.models.networks import EmbeddingNet, TripletNet
@@ -20,7 +21,9 @@ margin = 1.
 embedding_net = EmbeddingNet(300)
 embedding_net.to(device)
 
-model = TripletNet(embedding_net)
+# model = TripletNet(embedding_net)
+model = load_file_or_model("model8.pk")
+
 model.to(device)
 loss_fn = MyOnlineTripletLoss(margin, sample_number)
 lr = 1e-3

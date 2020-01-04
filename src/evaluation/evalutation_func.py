@@ -4,9 +4,37 @@ import pickle
 import pandas as pd
 import numpy as np
 import scipy
-from sklearn.metrics.pairwise import cosine_similarity
-
+from sklearn.metrics.pairwise import cosine_similarity, pairwise_distances
+from torch import nn
+import torch
+import torch.nn.functional as F
 from src.data.read_data import root_dir, read_paper, read_validation_data, read_train_data, load_file_or_model
+
+
+def cs(x,y):
+    prod = torch.mm(x, y)
+    len1 = torch.sqrt(torch.mm(x, x.transpose(1,0)))
+    len2 = torch.sqrt(torch.mm(y, y.transpose(1,0)))
+    return prod / (len1 * len2)
+
+
+def sort_func(matrix, top):
+    device = torch.device('cuda')
+    tm = torch.FloatTensor(matrix)
+    tm.to(device)
+    for _ in range(top):
+        col = tm.argmax(1)
+        col = col.cpu().flatten().tolist()
+        value = tm.max(1)
+
+        value = value.flatten().tolist()
+        row = list(range(sub_length))
+
+        # max_matrix = scipy.sparse.csr_matrix((value, (row, col)), result.shape)
+        max_matrix = np.zeros(result.shape)
+        max_matrix[row, col] = value
+        result -= max_matrix
+        max_cols.append(col)
 
 
 def output_top_index(description_tf_idf, paper_tf_idf, top=3, sub_length=1000, dense=False):
@@ -15,28 +43,65 @@ def output_top_index(description_tf_idf, paper_tf_idf, top=3, sub_length=1000, d
     start = 0
     full_max_columns = []
     print("start")
+    # if dense:
+    #     device = torch.device('cuda')
+    #     cos = nn.CosineSimilarity(dim=1)
+    #     cos.to(device)
+    #     description_tf_idf = torch.FloatTensor(description_tf_idf)
+    #     paper_tf_idf = torch.FloatTensor(paper_tf_idf)
+    #     paper_tf_idf.to(device)
+    #     description_tf_idf.to(device)
+
     while length > 0:
         if length < sub_length:
             sub_length = length
         length -= sub_length
 
-        result = matrix_similarity(description_tf_idf[start:start + sub_length], paper_tf_idf, dense)
+        if not dense:
+            result = matrix_similarity(description_tf_idf[start:start + sub_length], paper_tf_idf, dense)
+        else:
+            # result = F.cs(description_tf_idf[start:start + sub_length], paper_tf_idf)
+            result = matrix_similarity(description_tf_idf[start:start + sub_length], paper_tf_idf, dense)
 
         max_cols = []
 
-        for _ in range(top):
-            col = result.argmax(1)
-            col = col.flatten().tolist()[0]
-            value = result.max(1)
-            value = value.todense().flatten().tolist()[0]
-            row = list(range(sub_length))
+        if not dense:
+            for _ in range(top):
+                col = result.argmax(1)
+                col = col.flatten().tolist()[0]
+                value = result.max(1)
+                try:
+                    value = value.todense().flatten().tolist()[0]
+                except AttributeError:
+                    value = value.flatten().tolist()[0]
+                row = list(range(sub_length))
 
-            max_matrix = scipy.sparse.csr_matrix((value, (row, col)), result.shape)
-            result -= max_matrix
+                max_matrix = scipy.sparse.csr_matrix((value, (row, col)), result.shape)
+                result -= max_matrix
+                max_cols.append(col)
 
-            max_cols.append(col)
+        else:
+            # for _ in range(top):
+            #     col = result.argmax(1)
+            #     col = col.flatten().tolist()
+            #     value = result.max(1)
+            #
+            #     value = value.flatten().tolist()
+            #     row = list(range(sub_length))
+            #
+            #     # max_matrix = scipy.sparse.csr_matrix((value, (row, col)), result.shape)
+            #     max_matrix = np.zeros(result.shape)
+            #     max_matrix[row, col] = value
+            #     result -= max_matrix
+            #     max_cols.append(col)
+            print("start sort")
+            col = result.argsort(1)[:, :top]
+            col = col.tolist()
 
-        max_cols = np.array(max_cols).T.tolist()
+            max_cols = col
+
+        # max_cols = np.array(max_cols).T.tolist()
+
         full_max_columns += max_cols
 
         print("length left:", length)
@@ -91,7 +156,12 @@ def prediction_metrics(true_labels, predictions):
 
 
 def matrix_similarity(description_matrix, paper_matrix, dense):
-    return cosine_similarity(description_matrix, paper_matrix, dense_output=dense)
+
+    return pairwise_distances(description_matrix, paper_matrix,metric="l2", n_jobs=4)
+    # return cosine_similarity(description_matrix, paper_matrix, dense_output=dense)
+
+
+
 
 
 def save_prediction_of_xx_triplet(top_index_name="top_index.pk", is_validation=True, number_to_save=3, name_to_save="validation.csv"):
