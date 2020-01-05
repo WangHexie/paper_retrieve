@@ -37,7 +37,7 @@ def sort_func(matrix, top):
         max_cols.append(col)
 
 
-def output_top_index(description_tf_idf, paper_tf_idf, top=3, sub_length=1000, dense=False):
+def output_top_index(description_tf_idf, paper_tf_idf, top=3, sub_length=10, dense=False):
     length = description_tf_idf.shape[0]
 
     start = 0
@@ -157,11 +157,8 @@ def prediction_metrics(true_labels, predictions):
 
 def matrix_similarity(description_matrix, paper_matrix, dense):
 
-    return pairwise_distances(description_matrix, paper_matrix,metric="l2", n_jobs=4)
+    return pairwise_distances(description_matrix, paper_matrix,metric="l1", n_jobs=4)
     # return cosine_similarity(description_matrix, paper_matrix, dense_output=dense)
-
-
-
 
 
 def save_prediction_of_xx_triplet(top_index_name="top_index.pk", is_validation=True, number_to_save=3, name_to_save="validation.csv"):

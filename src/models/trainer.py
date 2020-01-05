@@ -7,7 +7,7 @@ from src.models.networks import TripletNet, EmbeddingNet, save_model
 
 
 def fit(train_loader, model, loss_fn, optimizer, scheduler, n_epochs, log_interval, metrics=[],
-        start_epoch=0):
+        start_epoch=0, name=""):
     """
     Loaders, model, loss function and metrics should work together for a given task,
     i.e. The model should be able to process data output of loaders,
@@ -37,7 +37,7 @@ def fit(train_loader, model, loss_fn, optimizer, scheduler, n_epochs, log_interv
         #                                                                          val_loss)
         for metric in metrics:
             message += '\t{}: {}'.format(metric.name(), metric.value())
-        save_model(model, str(epoch))
+        save_model(model, name+str(epoch))
 
         print(message)
 

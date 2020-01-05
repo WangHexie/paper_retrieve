@@ -45,8 +45,9 @@ def output_description_matrix(description, model_name, triplet_text: TripletText
     return np.concatenate(full_embedding)
 
 
-def output_description_and_paper_text(model_name):
+def output_description_and_paper_text(model_name, temporary=False, number=1000):
     triplet_text = TripletText()
+
     paper_info = output_description_matrix(triplet_text.papers["full"].values, model_name, triplet_text)
     save_embedding(paper_info, "paper_info_triplet.pk")
     save_embedding(np.array(triplet_text.papers.index), "paper_id.pk")
@@ -80,15 +81,15 @@ def output_description_and_paper_text(model_name):
 
 
 if __name__ == '__main__':
-    # output_description_and_paper_text("model8.pk")
-    full_max = output_top_index(load_file_or_model("train_description.pk"), load_file_or_model("paper_info_triplet.pk"),
-                                top=3, dense=True)
-    save_embedding(full_max, "top_index_triplet.pk")
-    save_prediction_of_xx_triplet("top_index_triplet.pk", is_validation=False, name_to_save="train_triplet.csv")
+    # output_description_and_paper_text("modelhardest2_abs_loss_hign_learning_rate1.pk")
+    # full_max = output_top_index(load_file_or_model("train_description.pk"), load_file_or_model("paper_info_triplet.pk"),
+    #                             top=3000, dense=True, sub_length=1000)
+    # save_embedding(full_max, "top_index_triplet.pk")
+    save_prediction_of_xx_triplet("top_index_triplet.pk", is_validation=False, name_to_save="train_triplet.csv", number_to_save=1000)
     df = pd.read_csv(os.path.join(root_dir(), "result", "train_triplet.csv"), header=None)
     prediction_metrics(load_file_or_model("train_paper_id_of_description.pk"), df.values)
 
-    full_max = output_top_index(load_file_or_model("validation_description.pk"),
-                                load_file_or_model("paper_info_triplet.pk"), top=3, dense=True)
-    save_embedding(full_max, "top_index_triplet_validation.pk")
-    save_prediction_of_xx_triplet("top_index_triplet_validation.pk", is_validation=True, name_to_save="validation_triplet.csv")
+    # full_max = output_top_index(load_file_or_model("validation_description.pk"),
+    #                             load_file_or_model("paper_info_triplet.pk"), top=3, dense=True)
+    # save_embedding(full_max, "top_index_triplet_validation.pk")
+    # save_prediction_of_xx_triplet("top_index_triplet_validation.pk", is_validation=True, name_to_save="validation_triplet.csv")

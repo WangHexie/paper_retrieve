@@ -10,7 +10,7 @@ from torch.utils.data.sampler import BatchSampler
 from torchnlp import word_to_vector
 
 from src.data.datasets import preprocessor, tokenize
-from src.data.read_data import read_paper, read_train_data, root_dir
+from src.data.read_data import read_paper, read_train_data, root_dir, load_file_or_model
 
 
 class TripletText(Dataset):
@@ -19,7 +19,7 @@ class TripletText(Dataset):
     Test: Creates fixed triplets for testing
     """
 
-    def __init__(self, batch_size=64, sample_num=4, max_len=50):
+    def __init__(self, batch_size=64, sample_num=4, max_len=50, random=True, hard=200):
         papers = read_paper()
         papers.dropna(subset=["paper_id"], inplace=True)
         papers["full"] = (papers["title"].apply(lambda x: x + " " if not pd.isna(x) else " ") + \
@@ -37,15 +37,18 @@ class TripletText(Dataset):
         self.train_description = train_data["description_text"].apply(
             lambda x: preprocessor(x) if not pd.isna(x) else "  ")
 
-        self.random = True
+        self.random = random
         self.batch_size = batch_size
         self.sample_num = sample_num
         self.to_max = True
         self.embedding = word_to_vector.FastText(cache=os.path.join(root_dir(), "models"))
         self.max_len = max_len
+        self.negative_sample = load_file_or_model("top_index_triplet.pk")
+        self.hard = hard
 
     def shuffle(self):
-        self.train_description, self.train_pair = shuffle(self.train_description, self.train_pair)
+        self.train_description, self.train_pair, self.negative_sample = shuffle(self.train_description, self.train_pair,
+                                                                                self.negative_sample)
 
     def max_index(self):
         return int(self.__len__() / self.batch_size)
@@ -94,15 +97,18 @@ class TripletText(Dataset):
             negative_samples = np.vstack(temp)
         else:
             # TODO: hard mining
-            """
+            temp = []
             for i in range(self.batch_size):
-                negative_index = np.random.sample(range(len(self.papers)), self.batch_size)
-                while (negative_index == positive_samples_index[i]).any():
-                    negative_index = np.random.sample(range(len(self.papers)), self.batch_size)
-                negative_samples = self.papers[negative_index].values
-                n_vectors = self.model.predict(negative_samples)
-                anchor_vector = self.model.predict(positive_samples[i])
-            """
+                negative_index = np.random.choice(self.negative_sample[index * self.batch_size + i][:self.hard],
+                                                  self.sample_num)
+                negative_index = np.array(self.papers.index)[negative_index]
+                while (negative_index == positive_samples_index.iloc[i]).any():
+                    negative_index = np.random.choice(self.negative_sample[index * self.batch_size + i][:self.hard],
+                                                      self.sample_num)
+
+                    negative_index = np.array(self.papers.index)[negative_index]
+                temp.append(self.papers.loc[negative_index].values)
+            negative_samples = np.vstack(temp)
         return self.string_to_vec(anchors), self.string_to_vec(positive_samples.flatten()), self.string_to_vec(
             negative_samples.flatten())
 
@@ -148,3 +154,8 @@ class BalancedBatchSampler(BatchSampler):
 
     def __len__(self):
         return self.n_dataset // self.batch_size
+
+
+if __name__ == '__main__':
+    t = TripletText(random=False)
+    t[0]

@@ -12,9 +12,9 @@ class EmbeddingNet(nn.Module):
         # TODO: residual network or text cnn or Attention
         super(EmbeddingNet, self).__init__()
         self.convnet = nn.Sequential(nn.Conv1d(input_embedding_size, 64, 5), nn.PReLU(),
-                                     nn.MaxPool1d(2, stride=2),
+                                     nn.AvgPool1d(2, stride=2),
                                      nn.Conv1d(64, 32, 5), nn.PReLU(),
-                                     nn.MaxPool1d(2, stride=2),
+                                     nn.AvgPool1d(2, stride=2),
                                      nn.Conv1d(32, 16, 5), nn.PReLU(),
                                      nn.MaxPool1d(2, stride=2),
                                      # nn.Conv1d(16, 8, 5), nn.PReLU(),
