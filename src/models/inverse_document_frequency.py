@@ -43,7 +43,7 @@ def output_idf_of_paper():
                    papers["keywords"].apply(lambda x: x.replace(";", " ") + " " if not pd.isna(x) else " nan ") + \
                    papers["abstract"].apply(lambda x: x + " " if not pd.isna(x) else " nan "))
     final = calculate_inverse_document_frequency(full_string.values)
-    save_embedding(final, "paper_inverse_frequency")
+    save_embedding(final, "paper_inverse_frequency.pk")
 
 
 if __name__ == '__main__':

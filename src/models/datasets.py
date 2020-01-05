@@ -19,7 +19,7 @@ class TripletText(Dataset):
     Test: Creates fixed triplets for testing
     """
 
-    def __init__(self, batch_size=64, sample_num=4, max_len=50, random=True, hard=200):
+    def __init__(self, batch_size=64, sample_num=4, max_len=50, random=True, hard=200, use_idf=False):
         papers = read_paper()
         papers.dropna(subset=["paper_id"], inplace=True)
         papers["full"] = (papers["title"].apply(lambda x: x + " " if not pd.isna(x) else " ") + \
@@ -45,6 +45,8 @@ class TripletText(Dataset):
         self.max_len = max_len
         self.negative_sample = load_file_or_model("top_index_triplet.pk")
         self.hard = hard
+        self.inverse_document_frequency = load_file_or_model("paper_inverse_frequency.pk")
+        self.use_idf = use_idf
 
     def shuffle(self):
         self.train_description, self.train_pair, self.negative_sample = shuffle(self.train_description, self.train_pair,
@@ -58,7 +60,12 @@ class TripletText(Dataset):
         try:
 
             wordss = list(map(lambda x: x + ["nan"], wordss))
-            embeddings = list(map(lambda words: torch.stack([self.embedding[word] for word in words]), wordss))
+            if self.use_idf:
+                embeddings = list(map(lambda words: torch.stack([self.embedding[word] * self.inverse_document_frequency[
+                    word] if (word in self.inverse_document_frequency) else self.embedding[word] for word in words]),
+                                      wordss))
+            else:
+                embeddings = list(map(lambda words: torch.stack([self.embedding[word] for word in words]), wordss))
         except RuntimeError:
             print(wordss)
             for i in wordss:
