@@ -8,8 +8,9 @@ from sklearn.metrics.pairwise import cosine_similarity, pairwise_distances
 from torch import nn
 import torch
 import torch.nn.functional as F
-from src.data.read_data import root_dir, read_paper, read_validation_data, read_train_data, load_file_or_model
 
+from src.config.configs import triplet_config
+from src.data.read_data import root_dir, read_paper, read_validation_data, read_train_data, load_file_or_model
 
 def cs(x,y):
     prod = torch.mm(x, y)

@@ -1,5 +1,6 @@
 import os
 
+import fasttext
 import numpy as np
 import pandas as pd
 import torch
@@ -9,7 +10,7 @@ from torch.utils.data import Dataset
 from torch.utils.data.sampler import BatchSampler
 from torchnlp import word_to_vector
 
-from src.data.datasets import preprocessor, tokenize
+from src.data.datasets import preprocessor, tokenizer_and_after
 from src.data.read_data import read_paper, read_train_data, root_dir, load_file_or_model
 
 
@@ -19,7 +20,8 @@ class TripletText(Dataset):
     Test: Creates fixed triplets for testing
     """
 
-    def __init__(self, batch_size=64, sample_num=4, max_len=50, random=True, hard=200, use_idf=False):
+    def __init__(self, batch_size=64, sample_num=4, max_len=50, random=True, hard=200, use_idf=False,
+                 use_self_train=False):
         papers = read_paper()
         papers.dropna(subset=["paper_id"], inplace=True)
         papers["full"] = (papers["title"].apply(lambda x: x + " " if not pd.isna(x) else " ") + \
@@ -47,6 +49,8 @@ class TripletText(Dataset):
         self.hard = hard
         self.inverse_document_frequency = load_file_or_model("paper_inverse_frequency.pk")
         self.use_idf = use_idf
+        self.use_self_train = use_self_train
+        self.embedding_model = fasttext.load_model(os.path.join(root_dir(), "models", "fasttext.bin"))
 
     def shuffle(self):
         self.train_description, self.train_pair, self.negative_sample = shuffle(self.train_description, self.train_pair,
@@ -55,17 +59,46 @@ class TripletText(Dataset):
     def max_index(self):
         return int(self.__len__() / self.batch_size)
 
+    def get_word_embedding(self, word):
+        if self.use_self_train:
+            return torch.FloatTensor(self.embedding_model.get_word_vector(word))
+        else:
+            return self.embedding[word]
+
+    def string_to_1d_vec(self, strings):
+        def get_word_embedding(word):
+            if self.use_self_train:
+                return self.embedding_model.get_word_vector(word)
+            else:
+                return self.embedding[word].cpu().numpy()
+
+        wordss = list(map(lambda x: tokenizer_and_after(x)[:self.max_len], strings))
+
+        wordss = list(map(lambda x: x + ["nan"], wordss))
+        if self.use_idf:
+            embeddings = list(
+                map(lambda words: np.array([get_word_embedding(word) * self.inverse_document_frequency[
+                    word] if (word in self.inverse_document_frequency) else get_word_embedding(word) for word
+                                               in words]).mean(axis=0), wordss))
+        else:
+            embeddings = list(
+                map(lambda words: np.array([get_word_embedding(word) for word in words]).mean(axis=0), wordss))
+
+        return np.array(embeddings)
+
     def string_to_vec(self, strings):
-        wordss = list(map(lambda x: tokenize(x)[:self.max_len], strings))
+        wordss = list(map(lambda x: tokenizer_and_after(x)[:self.max_len], strings))
         try:
 
             wordss = list(map(lambda x: x + ["nan"], wordss))
             if self.use_idf:
-                embeddings = list(map(lambda words: torch.stack([self.embedding[word] * self.inverse_document_frequency[
-                    word] if (word in self.inverse_document_frequency) else self.embedding[word] for word in words]),
-                                      wordss))
+                embeddings = list(
+                    map(lambda words: torch.stack([self.get_word_embedding(word) * self.inverse_document_frequency[
+                        word] if (word in self.inverse_document_frequency) else self.get_word_embedding(word) for word
+                                                   in words]), wordss))
             else:
-                embeddings = list(map(lambda words: torch.stack([self.embedding[word] for word in words]), wordss))
+                embeddings = list(
+                    map(lambda words: torch.stack([self.get_word_embedding(word) for word in words]), wordss))
         except RuntimeError:
             print(wordss)
             for i in wordss:

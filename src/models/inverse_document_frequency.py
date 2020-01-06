@@ -16,7 +16,11 @@ def calculate_inverse_document_frequency(document: List[str]):
     result = map(lambda x: preprocessor(x), document)
     result = map(lambda x: tokenize(x), result)
 
+    i = 0
     for string in result:
+        i += 1
+        if i % 10000 == 0:
+            print(i)
         counted = set()
         for word in string:
             if word not in counted:
@@ -24,12 +28,20 @@ def calculate_inverse_document_frequency(document: List[str]):
                     full[word] += 1
                 except KeyError as e:
                     full[word] = 1
-                    counted.add(word)
+
+                counted.add(word)
 
     print(full["is"])
 
     for key in full.keys():
         full[key] = math.log2(number_of_document / full[key])
+
+    max_value = max(full.values())
+    print(max_value)
+    print("min", min(full.values()))
+
+    for key in full.keys():
+        full[key] = full[key]/max_value
 
     print(full["is"])
 
