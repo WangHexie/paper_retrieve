@@ -51,7 +51,6 @@ def train_epoch(train_loader, model, loss_fn, optimizer, log_interval, metrics):
     total_loss = 0
 
     for batch_idx in range(int(len(train_loader)/train_loader.batch_size)):
-        train_loader.shuffle()
 
         data = train_loader[batch_idx]
         optimizer.zero_grad()
@@ -75,6 +74,9 @@ def train_epoch(train_loader, model, loss_fn, optimizer, log_interval, metrics):
 
             print(message)
             losses = []
+
+        train_loader.shuffle()
+
 
     total_loss /= (batch_idx + 1)
     return total_loss, metrics

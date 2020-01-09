@@ -43,14 +43,18 @@ class TripletText(Dataset):
         self.batch_size = batch_size
         self.sample_num = sample_num
         self.to_max = True
-        self.embedding = word_to_vector.FastText(cache=os.path.join(root_dir(), "models"))
         self.max_len = max_len
         self.negative_sample = load_file_or_model("top_index_triplet.pk")
         self.hard = hard
         self.inverse_document_frequency = load_file_or_model("paper_inverse_frequency.pk")
         self.use_idf = use_idf
         self.use_self_train = use_self_train
-        self.embedding_model = fasttext.load_model(os.path.join(root_dir(), "models", "fasttext.bin"))
+
+        if use_self_train:
+            self.embedding_model = fasttext.load_model(os.path.join(root_dir(), "models", "fasttext.bin"))
+        else:
+            self.embedding = word_to_vector.FastText(cache=os.path.join(root_dir(), "models"))
+
 
     def shuffle(self):
         self.train_description, self.train_pair, self.negative_sample = shuffle(self.train_description, self.train_pair,
@@ -87,10 +91,10 @@ class TripletText(Dataset):
         return np.array(embeddings)
 
     def string_to_vec(self, strings):
-        wordss = list(map(lambda x: tokenizer_and_after(x)[:self.max_len], strings))
+        wordss = list(map(lambda x: tokenizer_and_after(x)[:self.max_len-1], strings)) # because of nan, length -1
         try:
 
-            wordss = list(map(lambda x: x + ["nan"], wordss))
+            wordss = list(map(lambda x: x + ["nan"], wordss))  # length longer
             if self.use_idf:
                 embeddings = list(
                     map(lambda words: torch.stack([self.get_word_embedding(word) * self.inverse_document_frequency[

@@ -28,9 +28,25 @@ class TripletTrainConfig:
     use_idf: bool = False
     use_self_train: bool = False
     embedding_size: int = 300
+    absolute: bool = False
+    soft_margin: bool = False
 
 
-default_train_config = TripletTrainConfig()
+try_to_fix_converge_problem = TripletTrainConfig(use_self_train=True, embedding_size=100, use_idf=True,
+                                                 random=False, hard=200, batch_size=16, sample_number=64, absolute=True
+                                                 )
+
+try_to_fix_converge_problem_stage_2 = TripletTrainConfig(use_self_train=True, embedding_size=100, use_idf=True,
+                                                         random=False, hard=2000, batch_size=16, sample_number=32,
+                                                         absolute=True, soft_margin=True
+                                                         )
+
+try_to_fix_converge_problem_stage_3 = TripletTrainConfig(use_self_train=True, embedding_size=100, use_idf=True,
+                                                         random=True, hard=2000, batch_size=16, sample_number=32,
+                                                         absolute=True, soft_margin=True
+                                                         )
+default_train_config = try_to_fix_converge_problem_stage_2
+original_train_config = TripletTrainConfig(max_len=50)
 
 triplet_config = SaveInfoConfig(paper_embedding="paper_info_triplet.pk",
                                 paper_id="paper_id.pk",

@@ -44,28 +44,38 @@ class MyOnlineTripletLoss(nn.Module):
     Takes embeddings of an anchor sample, a positive sample and a negative sample
     """
 
-    def __init__(self, margin, sample_number=4, absolute=False):
+    def __init__(self, margin, sample_number=4, absolute=False, soft_margin=False):
         super(MyOnlineTripletLoss, self).__init__()
         self.margin = margin
         self.sample_number = sample_number
         self.absolute = absolute
+        self.soft_margin = soft_margin
 
     def forward(self, anchor, positive, negative, size_average=True):
         # distance_negative = (anchor - negative).pow(2).sum(1)  # .pow(.5)
         negative_index = []
-
-        for i in range(int(len(negative)/self.sample_number)):
-            anchor_repeat = torch.stack(self.sample_number * [anchor[i]])
-            distance_negative = (anchor_repeat - negative[i*self.sample_number:(i+1)*self.sample_number]).pow(2).sum(1)
-            negative_index.append(i*self.sample_number + int(distance_negative.argmin()))
         if self.absolute:
-            distance_positive = (anchor - positive).abs_().sum(1)  # .pow(.5)
-            distance_negative = (anchor - negative[negative_index]).abs_().sum(1)  # .pow(.5)
+
+            for i in range(int(len(negative)/self.sample_number)):
+                anchor_repeat = torch.stack(self.sample_number * [anchor[i]])
+                distance_negative = torch.abs((anchor_repeat - negative[i*self.sample_number:(i+1)*self.sample_number])).sum(1)
+                negative_index.append(i*self.sample_number + int(distance_negative.argmin()))
+
+            distance_positive = (anchor - positive).pow(2).sum(1).pow(.5)
+            distance_negative = (anchor - negative[negative_index]).pow(2).sum(1).pow(.5)
         else:
+            for i in range(int(len(negative)/self.sample_number)):
+                anchor_repeat = torch.stack(self.sample_number * [anchor[i]])
+                distance_negative = (anchor_repeat - negative[i*self.sample_number:(i+1)*self.sample_number]).pow(2).sum(1)
+                negative_index.append(i*self.sample_number + int(distance_negative.argmin()))
+
             distance_positive = (anchor - positive).pow(2).sum(1)  # .pow(.5)
             distance_negative = (anchor - negative[negative_index]).pow(2).sum(1)  # .pow(.5)
 
-        losses = F.relu(distance_positive - distance_negative + self.margin)
+        if self.soft_margin:
+            losses = torch.log1p(torch.exp(distance_positive-distance_negative))
+        else:
+            losses = F.relu(distance_positive - distance_negative + self.margin)
         return losses.mean() if size_average else losses.sum()
 
 

@@ -5,12 +5,14 @@ import pandas as pd
 import numpy as np
 import scipy
 from sklearn.metrics.pairwise import cosine_similarity, pairwise_distances
+from sklearn.neighbors import NearestNeighbors
 from torch import nn
 import torch
 import torch.nn.functional as F
 
 from src.config.configs import triplet_config
 from src.data.read_data import root_dir, read_paper, read_validation_data, read_train_data, load_file_or_model
+
 
 def cs(x,y):
     prod = torch.mm(x, y)
@@ -38,20 +40,22 @@ def sort_func(matrix, top):
         max_cols.append(col)
 
 
-def output_top_index(description_tf_idf, paper_tf_idf, top=3, sub_length=10, dense=False):
+def fast_neighborhood_search(description, paper, top=3):
+    nbrs = NearestNeighbors(n_neighbors=top, algorithm='auto', n_jobs=-1).fit(paper)
+    index = nbrs.kneighbors(description)
+    return index
+
+
+def output_top_index(description_tf_idf, paper_tf_idf, top=3, sub_length=10, dense=False, fast=False):
+    if fast:
+        return fast_neighborhood_search(description_tf_idf, paper_tf_idf, top=top)
+
     length = description_tf_idf.shape[0]
 
     start = 0
     full_max_columns = []
     print("start")
-    # if dense:
-    #     device = torch.device('cuda')
-    #     cos = nn.CosineSimilarity(dim=1)
-    #     cos.to(device)
-    #     description_tf_idf = torch.FloatTensor(description_tf_idf)
-    #     paper_tf_idf = torch.FloatTensor(paper_tf_idf)
-    #     paper_tf_idf.to(device)
-    #     description_tf_idf.to(device)
+
 
     while length > 0:
         if length < sub_length:
@@ -61,7 +65,6 @@ def output_top_index(description_tf_idf, paper_tf_idf, top=3, sub_length=10, den
         if not dense:
             result = matrix_similarity(description_tf_idf[start:start + sub_length], paper_tf_idf, dense)
         else:
-            # result = F.cs(description_tf_idf[start:start + sub_length], paper_tf_idf)
             result = matrix_similarity(description_tf_idf[start:start + sub_length], paper_tf_idf, dense)
 
         max_cols = []

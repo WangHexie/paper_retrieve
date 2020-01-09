@@ -11,15 +11,24 @@ class EmbeddingNet(nn.Module):
     def __init__(self, input_embedding_size):
         # TODO: residual network or text cnn or Attention
         super(EmbeddingNet, self).__init__()
-        self.convnet = nn.Sequential(nn.Conv1d(input_embedding_size, 64, 5), nn.PReLU(),
+        self.convnet = nn.Sequential(
+                                     nn.Conv1d(input_embedding_size, 64, 4),
+                                     nn.BatchNorm1d(64),
+                                     nn.PReLU(),
                                      nn.AvgPool1d(2, stride=2),
-                                     nn.Conv1d(64, 32, 5), nn.PReLU(),
+                                     nn.Conv1d(64, 32, 4),
+                                     nn.BatchNorm1d(32),
+                                     nn.PReLU(),
                                      nn.AvgPool1d(2, stride=2),
-                                     nn.Conv1d(32, 16, 5), nn.PReLU(),
-                                     nn.MaxPool1d(2, stride=2),
+                                     nn.Conv1d(32, 16, 4),
+                                     nn.BatchNorm1d(16),
+                                     nn.PReLU(),
+                                     # nn.AdaptiveMaxPool1d(1),
                                      # nn.Conv1d(16, 8, 5), nn.PReLU(),
                                      # nn.MaxPool1d(2, stride=2),
                                      )
+
+        self.average_layer = nn.AdaptiveAvgPool1d(1)
 
         #
         # self.fc = nn.Sequential(nn.Linear(64 * 4 * 4, 256),
@@ -33,13 +42,20 @@ class EmbeddingNet(nn.Module):
     def forward(self, x):
         x = x.to(self.device)
         output = self.convnet(x)
+        # average = self.average_layer(x)
+        #
+        # output = torch.add(output, average)
         output = output.view(output.size()[0], -1)
 
         # output = self.fc(output)
         return output
 
     def get_embedding(self, x):
-        return self.forward(x)
+        x = x.to(self.device)
+        output = self.convnet(x)
+        output = output.view(output.size()[0], -1)
+
+        return output
 
 
 class EmbeddingNetL2(EmbeddingNet):
@@ -87,7 +103,7 @@ class TripletNet(nn.Module):
         return output
 
     def get_embedding(self, x):
-        return self.embedding_net(x)
+        return self.embedding_net.get_embedding(x)
 
 
 def save_model(model, name):

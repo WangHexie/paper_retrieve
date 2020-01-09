@@ -57,7 +57,7 @@ def output_description_and_paper_text(model_name, temporary=False, number=1000):
                                use_idf=default_train_config.use_idf,
                                use_self_train=default_train_config.use_self_train)
 
-    paper_info = output_description_matrix(config.papers["full"].values, model_name, triplet_text)
+    paper_info = output_description_matrix(triplet_text.papers["full"].values, model_name, triplet_text)
     save_embedding(paper_info, config.paper_embedding)
     save_embedding(np.array(triplet_text.papers.index), config.paper_id)
 
@@ -89,14 +89,14 @@ def output_description_and_paper_text(model_name, temporary=False, number=1000):
     print("one finished")
 
 
-def prediction_nn():
-    output_description_and_paper_text("modelhardest2_abs_loss_hign_learning_rate1.pk")
+def prediction_nn(model_name, top=100):
+    # output_description_and_paper_text(model_name)
     full_max = output_top_index(load_file_or_model(config.train_description_embedding),
                                 load_file_or_model(config.paper_embedding),
-                                top=3000, dense=True, sub_length=1000)
+                                top=top, dense=True, sub_length=1000, fast=True)
     save_embedding(full_max, config.train_top_index)
     save_prediction_of_xx_triplet(config.train_top_index, is_validation=False, name_to_save=config.train_prediction,
-                                  number_to_save=1000)
+                                  number_to_save=top)
     df = pd.read_csv(os.path.join(root_dir(), "result", config.train_prediction), header=None)
     prediction_metrics(load_file_or_model(config.train_paper_id), df.values)
 
@@ -141,7 +141,8 @@ def output_fast_vector():
     print("one finished")
 
 
-if __name__ == '__main__':
+def fasttext_prediction():
+    output_fast_vector()
     full_max = output_top_index(load_file_or_model(config.train_description_embedding),
                                 load_file_or_model(config.paper_embedding),
                                 top=3000, dense=True, sub_length=1000)
@@ -149,7 +150,7 @@ if __name__ == '__main__':
     save_prediction_of_xx_triplet(config.train_top_index,
                                   is_validation=False,
                                   name_to_save=config.train_prediction,
-                                  number_to_save=1000)
+                                  number_to_save=10)
     df = pd.read_csv(os.path.join(root_dir(), "result", config.train_prediction), header=None)
     prediction_metrics(load_file_or_model(config.train_paper_id), df.values)
 
@@ -158,3 +159,6 @@ if __name__ == '__main__':
     save_embedding(full_max, config.validation_top_index)
     save_prediction_of_xx_triplet(config.validation_top_index, is_validation=True,
                                   name_to_save=config.validation_prediction)
+
+if __name__ == '__main__':
+    prediction_nn("modelhardest2_abs_loss_idf4.pk", 3)
