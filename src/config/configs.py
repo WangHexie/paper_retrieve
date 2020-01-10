@@ -45,7 +45,7 @@ try_to_fix_converge_problem_stage_3 = TripletTrainConfig(use_self_train=True, em
                                                          random=True, hard=2000, batch_size=16, sample_number=32,
                                                          absolute=True, soft_margin=True
                                                          )
-default_train_config = try_to_fix_converge_problem_stage_2
+default_train_config = try_to_fix_converge_problem_stage_3
 original_train_config = TripletTrainConfig(max_len=50)
 
 triplet_config = SaveInfoConfig(paper_embedding="paper_info_triplet.pk",

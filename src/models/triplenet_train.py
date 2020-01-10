@@ -1,12 +1,13 @@
 import torch
 from torch import optim
 from torch.optim import lr_scheduler
+from torch.utils.data import DataLoader
 
 from src.config.configs import default_train_config
 from src.data.read_data import load_file_or_model
 from src.models.datasets import TripletText
 from src.models.losses import MyOnlineTripletLoss
-from src.models.networks import EmbeddingNet, TripletNet
+from src.models.networks import EmbeddingNet, TripletNet, TextCNN
 from src.models.trainer import fit
 
 triplet_train_dataset = TripletText(default_train_config.batch_size,
@@ -18,27 +19,32 @@ triplet_train_dataset = TripletText(default_train_config.batch_size,
                                     use_self_train=default_train_config.use_self_train)
 
 triplet_train_dataset.shuffle()
-# Set up the network and training parameters
 
-device = torch.device('cuda')
+dl = DataLoader(triplet_train_dataset, batch_size=None, num_workers=0)
 
-margin = 1.
-embedding_net = EmbeddingNet(default_train_config.embedding_size)
-embedding_net.to(device)
+if __name__ == '__main__':
 
-# model = TripletNet(embedding_net)
-model = load_file_or_model("modelhardest2_abs_loss_idf4.pk")
+    # Set up the network and training parameters
 
-model.to(device)
-loss_fn = MyOnlineTripletLoss(margin, default_train_config.sample_number, absolute=default_train_config.absolute,
-                              soft_margin=default_train_config.soft_margin)
-lr = 5e-3
-optimizer = optim.Adam(model.parameters(), lr=lr)
-scheduler = lr_scheduler.StepLR(optimizer, 2, gamma=0.1, last_epoch=-1)
-n_epochs = 20
-log_interval = 10
+    device = torch.device('cuda')
 
-fit(triplet_train_dataset, model, loss_fn, optimizer, scheduler, n_epochs, log_interval,
-    name="hardest2_abs_loss_idf", start_epoch=6)
+    margin = 1.
+    embedding_net = EmbeddingNet(default_train_config.embedding_size)
+    embedding_net.to(device)
 
-# fit(TripletText(16, 4), TripletNet(EmbeddingNet(300)), MyOnlineTripletLoss(1, 4), )
+    model = TripletNet(embedding_net)
+    # model = load_file_or_model("modelhardest2_abs_loss_idf4.pk")
+
+    model.to(device)
+    loss_fn = MyOnlineTripletLoss(margin, default_train_config.sample_number, absolute=default_train_config.absolute,
+                                  soft_margin=default_train_config.soft_margin)
+    lr = 1e-3
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+    scheduler = lr_scheduler.StepLR(optimizer, 2, gamma=0.1, last_epoch=-1)
+    n_epochs = 20
+    log_interval = 10
+
+    fit(dl, model, loss_fn, optimizer, scheduler, n_epochs, log_interval,
+        name="textcnn", start_epoch=0)
+
+    # fit(TripletText(16, 4), TripletNet(EmbeddingNet(300)), MyOnlineTripletLoss(1, 4), )

@@ -3,6 +3,7 @@ import pickle
 
 import torch
 import torch.nn as nn
+from torch.nn.functional import relu
 
 from src.data.read_data import root_dir
 
@@ -29,19 +30,48 @@ class EmbeddingNet(nn.Module):
                                      )
 
         self.average_layer = nn.AdaptiveAvgPool1d(1)
-
-        #
-        # self.fc = nn.Sequential(nn.Linear(64 * 4 * 4, 256),
-        #                         nn.PReLU(),
-        #                         nn.Linear(256, 256),
-        #                         nn.PReLU(),
-        #                         nn.Linear(256, 2)
-        #                         )
         self.device = torch.device('cuda')
 
     def forward(self, x):
         x = x.to(self.device)
         output = self.convnet(x)
+        # average = self.average_layer(x)
+        #
+        # output = torch.add(output, average)
+        output = output.view(output.size()[0], -1)
+
+        # output = self.fc(output)
+        return output
+
+    def get_embedding(self, x):
+        x = x.to(self.device)
+        output = self.convnet(x)
+        output = output.view(output.size()[0], -1)
+
+        return output
+
+
+class TextCNN(nn.Module):
+    def __init__(self, input_embedding_size):
+        # TODO: residual network or text cnn or Attention
+        super(TextCNN, self).__init__()
+        self.convnet = torch.nn.ModuleList()
+        kernel_size = [2, 3, 4, 5]
+
+        for _kernel_size in kernel_size:
+            for dilated_rate in [1, 2, 3, 4]:
+                self.convnet.append(nn.Conv1d(input_embedding_size, 16, _kernel_size, dilation=dilated_rate))
+
+        # self.myparameters = nn.ParameterList(self.convnet)
+        self.average_layer = nn.AdaptiveAvgPool1d(1)
+        self.device = torch.device('cuda')
+
+    def forward(self, x):
+        x = x.to(self.device)
+        cnns = [net(x).clamp(min=0) for net in self.convnet]
+        # relus = [relu(value) for value in cnns]
+        average = [self.average_layer(value) for value in cnns]
+        output = torch.cat(average, dim=1)
         # average = self.average_layer(x)
         #
         # output = torch.add(output, average)
@@ -99,7 +129,7 @@ class TripletNet(nn.Module):
     def transform(self, x):
         # x = self.string_to_vec(x)
         output = self.embedding_net(x)
-        output.cuda()
+        # output.cuda()
         return output
 
     def get_embedding(self, x):

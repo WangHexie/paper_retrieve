@@ -32,6 +32,7 @@ def output_description_matrix(description, model_name, triplet_text: TripletText
 
     dt = triplet_text
     model = load_file_or_model(model_name)
+    model = model.eval()
 
     full_embedding = []
     start = 0
@@ -90,7 +91,7 @@ def output_description_and_paper_text(model_name, temporary=False, number=1000):
 
 
 def prediction_nn(model_name, top=100):
-    # output_description_and_paper_text(model_name)
+    output_description_and_paper_text(model_name)
     full_max = output_top_index(load_file_or_model(config.train_description_embedding),
                                 load_file_or_model(config.paper_embedding),
                                 top=top, dense=True, sub_length=1000, fast=True)
@@ -161,4 +162,4 @@ def fasttext_prediction():
                                   name_to_save=config.validation_prediction)
 
 if __name__ == '__main__':
-    prediction_nn("modelhardest2_abs_loss_idf4.pk", 3)
+    prediction_nn("modeltextcnn0.pk", 3)

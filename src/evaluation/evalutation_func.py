@@ -1,23 +1,20 @@
 import os
 import pickle
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import scipy
-from sklearn.metrics.pairwise import cosine_similarity, pairwise_distances
-from sklearn.neighbors import NearestNeighbors
-from torch import nn
 import torch
-import torch.nn.functional as F
+from sklearn.metrics.pairwise import pairwise_distances, cosine_similarity
+from sklearn.neighbors import NearestNeighbors
 
-from src.config.configs import triplet_config
 from src.data.read_data import root_dir, read_paper, read_validation_data, read_train_data, load_file_or_model
 
 
-def cs(x,y):
+def cs(x, y):
     prod = torch.mm(x, y)
-    len1 = torch.sqrt(torch.mm(x, x.transpose(1,0)))
-    len2 = torch.sqrt(torch.mm(y, y.transpose(1,0)))
+    len1 = torch.sqrt(torch.mm(x, x.transpose(1, 0)))
+    len2 = torch.sqrt(torch.mm(y, y.transpose(1, 0)))
     return prod / (len1 * len2)
 
 
@@ -41,7 +38,7 @@ def sort_func(matrix, top):
 
 
 def fast_neighborhood_search(description, paper, top=3):
-    nbrs = NearestNeighbors(n_neighbors=top, algorithm='auto', n_jobs=-1).fit(paper)
+    nbrs = NearestNeighbors(n_neighbors=top, algorithm='ball_tree', n_jobs=-1).fit(paper)
     index = nbrs.kneighbors(description)
     return index
 
@@ -55,7 +52,6 @@ def output_top_index(description_tf_idf, paper_tf_idf, top=3, sub_length=10, den
     start = 0
     full_max_columns = []
     print("start")
-
 
     while length > 0:
         if length < sub_length:
@@ -128,7 +124,8 @@ def calculate_similarity(paper_name="paper_tf_idf.npz", description_name="descri
         pickle.dump(final, f)
 
 
-def save_prediction_of_xx(top_index_name="top_index.pk", is_validation=True, number_to_save=3, name_to_save="validation.csv"):
+def save_prediction_of_xx(top_index_name="top_index.pk", is_validation=True, number_to_save=3,
+                          name_to_save="validation.csv"):
     if not os.path.exists(os.path.join(root_dir(), "models", top_index_name)):
         calculate_similarity()
     with open(os.path.join(root_dir(), "models", top_index_name), "rb") as f:
@@ -160,13 +157,16 @@ def prediction_metrics(true_labels, predictions):
 
 
 def matrix_similarity(description_matrix, paper_matrix, dense):
-
-    return pairwise_distances(description_matrix, paper_matrix,metric="l1", n_jobs=4)
+    return pairwise_distances(description_matrix, paper_matrix, metric="euclidean", n_jobs=7)
+    # return scipy.spatial.distance.euclidean(description_matrix, paper_matrix, w=None)
     # return cosine_similarity(description_matrix, paper_matrix, dense_output=dense)
 
 
-def save_prediction_of_xx_triplet(top_index_name="top_index.pk", is_validation=True, number_to_save=3, name_to_save="validation.csv"):
+def save_prediction_of_xx_triplet(top_index_name="top_index.pk", is_validation=True, number_to_save=3,
+                                  name_to_save="validation.csv"):
     top_index = load_file_or_model(top_index_name)
+    if isinstance(top_index, tuple):
+        top_index = top_index[1]
 
     final_prediction = []
     paper_id = load_file_or_model("paper_id.pk")

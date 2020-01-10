@@ -44,7 +44,8 @@ class TripletText(Dataset):
         self.sample_num = sample_num
         self.to_max = True
         self.max_len = max_len
-        self.negative_sample = load_file_or_model("top_index_triplet.pk")
+        if not random:
+            self.negative_sample = load_file_or_model("top_index_triplet.pk")
         self.hard = hard
         self.inverse_document_frequency = load_file_or_model("paper_inverse_frequency.pk")
         self.use_idf = use_idf
@@ -55,10 +56,12 @@ class TripletText(Dataset):
         else:
             self.embedding = word_to_vector.FastText(cache=os.path.join(root_dir(), "models"))
 
-
     def shuffle(self):
-        self.train_description, self.train_pair, self.negative_sample = shuffle(self.train_description, self.train_pair,
-                                                                                self.negative_sample)
+        try:
+            self.train_description, self.train_pair, self.negative_sample = shuffle(self.train_description, self.train_pair,
+                                                                                    self.negative_sample)
+        except AttributeError:
+            self.train_description, self.train_pair = shuffle(self.train_description, self.train_pair)
 
     def max_index(self):
         return int(self.__len__() / self.batch_size)
@@ -201,5 +204,5 @@ class BalancedBatchSampler(BatchSampler):
 
 
 if __name__ == '__main__':
-    t = TripletText(random=False)
+    t = TripletText(random=True)
     t[0]
